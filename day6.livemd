@@ -1,0 +1,60 @@
+# Day6
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Sol6 do
+  def strlist2numlist(s) do
+    Enum.map(s, fn n -> String.to_integer(n) end)
+  end
+
+  def read_input_part1(text) do
+    [time, distance] = String.split(text, "\n")
+    times = Sol6.strlist2numlist(tl(String.split(time)))
+    distances = Sol6.strlist2numlist(tl(String.split(distance)))
+    Enum.zip(times, distances)
+  end
+
+  def read_input_part2(text) do
+    [time, distance] = String.split(text, "\n")
+
+    {Regex.replace(~r/[^\d]/, time, "") |> String.to_integer(),
+     Regex.replace(~r/[^\d]/, distance, "") |> String.to_integer()}
+  end
+
+  def solve({time, distance}) do
+    {r1, r2} = quadratic(1, -time, distance)
+    {m1, m2} = {ceil(r1 + 1.0e-6), floor(r2 - 1.0e-6)}
+    m2 - m1 + 1
+  end
+
+  def quadratic(a, b, c) do
+    {(-b - :math.sqrt(b * b - 4 * a * c)) / (2 * a),
+     (-b + :math.sqrt(b * b - 4 * a * c)) / (2 * a)}
+  end
+end
+```
+
+```elixir
+# Part 1
+input_data = Sol6.read_input_part1(Kino.Input.read(input))
+
+Enum.map(input_data, fn d -> Sol6.solve(d) end)
+|> Enum.reduce(1, fn x, acc -> x * acc end)
+```
+
+```elixir
+# Part 2
+input_data = Sol6.read_input_part2(Kino.Input.read(input))
+Sol6.solve(input_data)
+```
