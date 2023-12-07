@@ -1,0 +1,87 @@
+# day2
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+qs =
+  String.split(
+    "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
+Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
+Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
+Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
+Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green",
+    "\n"
+  )
+
+qs = String.split(Kino.Input.read(input), "\n")
+
+defmodule My do
+  def parse(s) do
+    rounds = String.split(List.last(String.split(s, ":")), ";")
+    {id, _} = Integer.parse(List.last(String.split(List.first(String.split(s, ":")))))
+
+    case Enum.all?(rounds, &My.valid?(&1)) do
+      true -> id
+      false -> 0
+    end
+  end
+
+  def valid?(s) do
+    red = get_color_num(s, "red")
+    green = get_color_num(s, "green")
+    blue = get_color_num(s, "blue")
+    red <= 12 and green <= 13 and blue <= 14
+  end
+
+  def get_color_num(s, color) do
+    case String.contains?(s, color) do
+      true -> elem(Integer.parse(List.last(String.split(List.first(String.split(s, color))))), 0)
+      false -> 0
+    end
+  end
+end
+
+Enum.reduce(qs, 0, fn x, acc -> acc + My.parse(x) end)
+```
+
+```elixir
+qs =
+  String.split(
+    "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
+Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
+Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
+Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
+Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green",
+    "\n"
+  )
+
+qs = String.split(Kino.Input.read(input), "\n")
+
+defmodule My2 do
+  def parse(s) do
+    [_, id | rounds] = Enum.filter(Regex.split(~r{[:,\s;]}, s), fn x -> x != "" end)
+    max_count = get_max_count(rounds, %{"red" => 0, "blue" => 0, "green" => 0})
+    max_count["red"] * max_count["blue"] * max_count["green"]
+  end
+
+  def get_max_count([], max_count), do: max_count
+
+  def get_max_count([count_str, color | rest], max_count) do
+    count = String.to_integer(count_str)
+    max_count = %{max_count | color => max(max_count[color], count)}
+    get_max_count(rest, max_count)
+  end
+end
+
+Enum.reduce(qs, 0, fn x, acc -> acc + My2.parse(x) end)
+```

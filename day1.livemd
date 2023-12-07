@@ -1,0 +1,87 @@
+# day1
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+test_input = Kino.Input.textarea("Input")
+```
+
+```elixir
+qs_example = String.split("two1nine
+eightwothree
+abcone2threexyz
+xtwone3four
+4nineeightseven2
+zoneight234
+7pqrstsixteen")
+
+qs = String.split(Kino.Input.read(test_input), "\n")
+
+defmodule MyCode do
+  def match_first_num(s) do
+    case s do
+      "one" <> _ -> 1
+      "two" <> _ -> 2
+      "three" <> _ -> 3
+      "four" <> _ -> 4
+      "five" <> _ -> 5
+      "six" <> _ -> 6
+      "seven" <> _ -> 7
+      "eight" <> _ -> 8
+      "nine" <> _ -> 9
+      "1" <> _ -> 1
+      "2" <> _ -> 2
+      "3" <> _ -> 3
+      "4" <> _ -> 4
+      "5" <> _ -> 5
+      "6" <> _ -> 6
+      "7" <> _ -> 7
+      "8" <> _ -> 8
+      "9" <> _ -> 9
+      _ -> MyCode.match_first_num(String.slice(s, 1, String.length(s) - 1))
+    end
+  end
+
+  def match_last_num(s) do
+    case s do
+      "eno" <> _ -> 1
+      "owt" <> _ -> 2
+      "eerht" <> _ -> 3
+      "ruof" <> _ -> 4
+      "evif" <> _ -> 5
+      "xis" <> _ -> 6
+      "neves" <> _ -> 7
+      "thgie" <> _ -> 8
+      "enin" <> _ -> 9
+      "1" <> _ -> 1
+      "2" <> _ -> 2
+      "3" <> _ -> 3
+      "4" <> _ -> 4
+      "5" <> _ -> 5
+      "6" <> _ -> 6
+      "7" <> _ -> 7
+      "8" <> _ -> 8
+      "9" <> _ -> 9
+      _ -> MyCode.match_last_num(String.slice(s, 1, String.length(s) - 1))
+    end
+  end
+
+  def func(s) do
+    n1 = MyCode.match_first_num(s)
+    n2 = MyCode.match_last_num(String.reverse(s))
+    n1 * 10 + n2
+  end
+end
+
+Enum.reduce(
+  Enum.map(qs, &MyCode.func(&1)),
+  0,
+  fn a, b -> a + b end
+)
+```
