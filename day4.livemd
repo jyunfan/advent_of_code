@@ -1,0 +1,83 @@
+# Day 4
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+input_data = Kino.Input.read(input)
+
+defmodule Sol4 do
+  def s2n(s) do
+    Enum.map(String.split(s), fn x -> String.to_integer(x) end)
+  end
+
+  def read_case(text) do
+    [_, rest] = String.split(text, ":")
+    [winning_cards, have_cards] = String.split(rest, "|")
+    {s2n(winning_cards), s2n(have_cards)}
+  end
+
+  def read(text) do
+    cases = String.split(text, "\n")
+    Enum.map(cases, fn x -> read_case(x) end)
+  end
+
+  def score_part1({winning_cards, have_cards}) do
+    Float.pow(
+      2.0,
+      MapSet.size(MapSet.intersection(MapSet.new(winning_cards), MapSet.new(have_cards))) - 1
+    )
+    |> floor
+  end
+
+  def score_part2({winning_cards, have_cards}) do
+    MapSet.size(MapSet.intersection(MapSet.new(winning_cards), MapSet.new(have_cards)))
+  end
+
+  def update_scratchcards(scratchcards, card_id, winning_cards) do
+    win_copies = Enum.at(winning_cards, card_id - 1)
+    current_copies = Map.get(scratchcards, card_id)
+
+    if win_copies > 0 do
+      Enum.reduce((card_id + 1)..(card_id + win_copies), scratchcards, fn grow_id, acc ->
+        Map.put(acc, grow_id, current_copies + Map.get(acc, grow_id, 0))
+      end)
+    else
+      scratchcards
+    end
+  end
+end
+```
+
+```elixir
+test_cases = Sol4.read(input_data)
+
+answer1 =
+  test_cases
+  |> Enum.map(&Sol4.score_part1(&1))
+  |> Enum.sum()
+```
+
+```elixir
+winning_cards =
+  test_cases
+  |> Enum.map(&Sol4.score_part2(&1))
+
+init_scratchcards = for key <- 1..length(test_cases), into: %{}, do: {key, 1}
+
+answer2 =
+  Enum.reduce(1..length(test_cases), init_scratchcards, fn card_id, cards ->
+    Sol4.update_scratchcards(cards, card_id, winning_cards)
+  end)
+  |> Map.values()
+  |> Enum.sum()
+```
