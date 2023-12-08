@@ -1,0 +1,55 @@
+# Day 8
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+test_data = Kino.Input.read(input)
+```
+
+```elixir
+defmodule Sol8 do
+  def add_edge([src, left, right], map) do
+    Map.put(map, src, [left, right])
+  end
+
+  def get_edge(text) do
+    Regex.replace(~r/[=(),]/, text, "") |> String.split()
+  end
+
+  def read(text) do
+    [cmd, _ | rest] = String.split(text, "\n")
+    # edges_str = String.split(rest, "\n")
+    [cmd, Enum.reduce(rest, %{}, fn x, acc -> Sol8.add_edge(Sol8.get_edge(x), acc) end)]
+  end
+
+  def go(_, _, "ZZZ", steps) do
+    steps
+  end
+
+  def go([cmd | rest], map, loc, steps) do
+    [left, right] = map[loc]
+
+    case cmd do
+      ?L -> Sol8.go(rest, map, left, steps + 1)
+      ?R -> Sol8.go(rest, map, right, steps + 1)
+    end
+  end
+end
+
+[cmd, map] = Sol8.read(test_data)
+Sol8.go(Enum.take(Stream.cycle(String.to_charlist(cmd)), 30000), map, "AAA", 0)
+```
+
+```elixir
+Enum.take(Stream.cycle(cmd), 1)
+```
