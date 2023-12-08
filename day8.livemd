@@ -32,24 +32,63 @@ defmodule Sol8 do
     [cmd, Enum.reduce(rest, %{}, fn x, acc -> Sol8.add_edge(Sol8.get_edge(x), acc) end)]
   end
 
-  def go(_, _, "ZZZ", steps) do
-    steps
+  # def go(_, _, "ZZZ", steps) do
+  #  steps
+  # end
+
+  def go_inf([], _, _, _) do
+    0
   end
 
   def go([cmd | rest], map, loc, steps) do
-    [left, right] = map[loc]
+    if String.ends_with?(loc, "Z") do
+      steps
+    else
+      [left, right] = map[loc]
 
-    case cmd do
-      ?L -> Sol8.go(rest, map, left, steps + 1)
-      ?R -> Sol8.go(rest, map, right, steps + 1)
+      case cmd do
+        ?L -> Sol8.go(rest, map, left, steps + 1)
+        ?R -> Sol8.go(rest, map, right, steps + 1)
+      end
+    end
+  end
+
+  def go_inf([cmd | rest], map, loc, steps) do
+    if String.ends_with?(loc, "Z") do
+      IO.inspect(steps)
+    else
+      [left, right] = map[loc]
+
+      case cmd do
+        ?L -> Sol8.go_inf(rest, map, left, steps + 1)
+        ?R -> Sol8.go_inf(rest, map, right, steps + 1)
+      end
     end
   end
 end
-
-[cmd, map] = Sol8.read(test_data)
-Sol8.go(Enum.take(Stream.cycle(String.to_charlist(cmd)), 30000), map, "AAA", 0)
 ```
 
 ```elixir
-Enum.take(Stream.cycle(cmd), 1)
+[cmd, map] = Sol8.read(test_data)
+```
+
+```elixir
+Enum.map(
+  ["JQA", "NHA", "AAA", "FSA", "LLA", "MNA"],
+  fn x -> Sol8.go_inf(Enum.take(Stream.cycle(String.to_charlist(cmd)), 50000), map, x, 0) end
+)
+```
+
+```elixir
+# I found that gcd of any 2 numbers are all the same.
+{Integer.gcd(13939, 11309), Integer.gcd(13939, 20777), Integer.gcd(18673, 15517)}
+```
+
+```elixir
+# So it's easy to get LCM of the 6 numbers
+Enum.reduce(
+  [13939, 11309, 20777, 15517, 17621, 18673],
+  1,
+  fn x, acc -> acc * x / 263 end
+) * 263
 ```
