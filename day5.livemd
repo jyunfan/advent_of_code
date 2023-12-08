@@ -1,0 +1,141 @@
+# Day5
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input5a = Kino.Input.textarea("Input")
+```
+
+```elixir
+input = Kino.Input.read(input5a)
+```
+
+```elixir
+[_, seeds | transforms] =
+  Enum.map(
+    String.split(input, ":"),
+    fn val ->
+      Regex.replace(
+        ~r/ $/,
+        Regex.replace(~r/^\n/, Regex.replace(~r/[a-z\-]|\n\n/, val, ""), ""),
+        ""
+      )
+    end
+  )
+```
+
+```elixir
+defmodule Sol do
+  def strlist2intlist(s) do
+    String.split(s)
+    |> Enum.map(fn x -> String.to_integer(x) end)
+  end
+
+  def traverse(loc, []) do
+    loc
+  end
+
+  def traverse(loc, transform) do
+    [dest, src, range] = hd(transform)
+    # IO.inspect([loc, dest, src, range])
+    if loc >= src and loc < src + range do
+      new_loc = loc - src + dest
+      # IO.inspect(["new loc", new_loc])
+      new_loc
+    else
+      traverse(loc, tl(transform))
+    end
+  end
+
+  def traverse_layers(loc, []) do
+    loc
+  end
+
+  def traverse_layers(loc, transforms) do
+    # IO.inspect(["Start from", loc])
+    traverse_layers(Sol.traverse(loc, hd(transforms)), tl(transforms))
+  end
+end
+
+seeds =
+  String.split(seeds)
+  |> Enum.map(fn x -> String.to_integer(x) end)
+
+transforms =
+  transforms
+  |> Enum.map(fn v ->
+    Enum.map(
+      String.split(v, "\n"),
+      fn r -> Sol.strlist2intlist(r) end
+    )
+  end)
+
+Enum.min(Enum.map(seeds, fn loc -> Sol.traverse_layers(loc, transforms) end))
+```
+
+```elixir
+defmodule Solb do
+  def strlist2intlist(s) do
+    String.split(s)
+    |> Enum.map(fn x -> String.to_integer(x) end)
+  end
+
+  def traverse(loc, []) do
+    loc
+  end
+
+  def split_interval(iv, transform) do
+    iv
+  end
+
+  def traverse(loc, transform) do
+    [dest, src, range] = hd(transform)
+    # IO.inspect([loc, dest, src, range])
+    if loc >= src and loc < src + range do
+      new_loc = loc - src + dest
+      # IO.inspect(["new loc", new_loc])
+      new_loc
+    else
+      traverse(loc, tl(transform))
+    end
+  end
+
+  def traverse_layers(loc, []) do
+    loc
+  end
+
+  def traverse_layers(loc, transforms) do
+    # IO.inspect(["Start from", loc])
+    traverse_layers(Sol.traverse(loc, hd(transforms)), tl(transforms))
+  end
+end
+
+seeds =
+  String.split(seeds)
+  |> Enum.map(fn x -> String.to_integer(x) end)
+
+transforms =
+  transforms
+  |> Enum.map(fn v ->
+    Enum.map(
+      String.split(v, "\n"),
+      fn r -> Sol.strlist2intlist(r) end
+    )
+  end)
+
+result = Enum.map(seeds, fn loc -> Sol.traverse_layers(loc, transforms) end)
+```
+
+```elixir
+Sol.traverse_layers(79, transforms)
+```
+
+```elixir
+dest = Set()
+```
