@@ -1,0 +1,66 @@
+# Day 9
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.5"},
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+input_data = Kino.Input.read(input)
+test_cases = String.split(input_data, "\n")
+
+defmodule Sol9 do
+  def read_case(text) do
+    Nx.tensor(Enum.map(String.split(text), &String.to_integer(&1)))
+  end
+
+  def get_diffs([first_seq | rest_seqs]) do
+    if Nx.sum(first_seq) == Nx.tensor(0) do
+      [first_seq | rest_seqs]
+    else
+      get_diffs([Nx.diff(first_seq), first_seq | rest_seqs])
+    end
+  end
+
+  def sum_last_element(seqs) do
+    Enum.reduce(seqs, 0, fn x, acc -> acc + Nx.to_number(x[-1]) end)
+  end
+
+  def get_first_elements(seqs) do
+    Enum.map(seqs, &Nx.to_number(&1[0])) |> Enum.reverse()
+  end
+
+  def solve_part1(test_cases) do
+    Enum.reduce(test_cases, 0, fn test_case, acc ->
+      acc +
+        Sol9.sum_last_element(Sol9.get_diffs([Sol9.read_case(test_case)]))
+    end)
+  end
+
+  def solve_part2(test_case) do
+    first_elements = Sol9.get_first_elements(Sol9.get_diffs([Sol9.read_case(test_case)]))
+
+    even_elements = Enum.drop_every(first_elements, 2)
+    IO.inspect({first_elements, even_elements})
+    odd_elements = first_elements -- even_elements
+    Enum.sum(odd_elements) - Enum.sum(even_elements)
+  end
+end
+
+Sol9.solve_part1(test_cases)
+
+Enum.map(test_cases, &Sol9.solve_part2(&1))
+|> Enum.sum()
+```
+
+```elixir
+Enum.drop_every([1, 2, 3, 4, 5], 2)
+```
