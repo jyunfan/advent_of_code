@@ -1,0 +1,107 @@
+# Day 11
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.5"},
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+input_data = Kino.Input.read(input)
+
+defmodule Sol11 do
+  def read(input_data) do
+    # Output a map {row, col} -> symbol
+
+    rows =
+      input_data
+      |> String.split("\n")
+
+    rows_with_index = Enum.zip(1..length(rows), rows)
+
+    points =
+      Enum.map(rows_with_index, fn {row_idx, row} ->
+        Enum.zip(1..String.length(row), String.to_charlist(row))
+        |> Enum.map(fn {col_idx, symbol} -> {row_idx, col_idx, symbol} end)
+      end)
+      |> Enum.flat_map(& &1)
+
+    Enum.reduce(points, %{}, fn {row_idx, col_idx, symbol}, acc ->
+      Map.put(acc, {row_idx, col_idx}, symbol)
+    end)
+  end
+
+  def find_row_galaxy_sum(data) do
+    {row_n, col_n} = Enum.max(Map.keys(data))
+
+    row_counts =
+      for row_id <- 1..row_n, reduce: %{} do
+        acc ->
+          Map.put(
+            acc,
+            row_id,
+            Enum.filter(1..col_n, fn col_id -> data[{row_id, col_id}] == ?# end)
+            |> Enum.count()
+          )
+      end
+
+    col_counts =
+      for col_id <- 1..col_n, reduce: %{} do
+        acc ->
+          Map.put(
+            acc,
+            col_id,
+            Enum.filter(1..row_n, fn row_id -> data[{row_id, col_id}] == ?# end)
+            |> Enum.count()
+          )
+      end
+
+    {row_counts, col_counts}
+  end
+
+  def find_all_galaxy(data, expand_rate) do
+    {row_counts, col_counts} = Sol11.find_row_galaxy_sum(data)
+
+    expand_rows =
+      MapSet.new(
+        for row <- Map.keys(row_counts), row_counts[row] == 0 do
+          row
+        end
+      )
+
+    expand_cols =
+      MapSet.new(
+        for col <- Map.keys(col_counts), col_counts[col] == 0 do
+          col
+        end
+      )
+
+    galaxies = Enum.filter(Map.keys(data), &(data[&1] == ?#))
+
+    for {r1, c1} <- galaxies, {r2, c2} <- galaxies, {r1, c1} < {r2, c2} do
+      abs(r2 - r1) + abs(c2 - c1) +
+        expand_rate * MapSet.size(MapSet.intersection(MapSet.new(r1..r2), expand_rows)) +
+        expand_rate * MapSet.size(MapSet.intersection(MapSet.new(c1..c2), expand_cols))
+    end
+    |> Enum.sum()
+  end
+end
+
+data = Sol11.read(input_data)
+Sol11.find_all_galaxy(data, 1_000_000 - 1)
+```
+
+```elixir
+
+```
+
+```elixir
+0..2
+```
