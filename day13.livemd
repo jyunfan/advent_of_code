@@ -1,0 +1,64 @@
+# Day 13
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.5"},
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Sol13 do
+  def read(text) do
+    for test_case <- String.split(text, "\n\n") do
+      for row <- String.split(test_case, "\n") do
+        String.to_charlist(row)
+      end
+    end
+  end
+
+  def compare_diff(left, right) do
+    for {x, y} <- Enum.zip(left, right) do
+      if x == y, do: 0, else: 1
+    end
+    |> Enum.sum()
+  end
+
+  def find_mirror(data, accept_diff) do
+    n = length(data)
+
+    Enum.reduce_while(1..(n - 1), 0, fn idx, _ ->
+      part_length = min(idx, n - idx)
+      upper_part = Enum.slice(data, idx - part_length, part_length) |> Enum.concat()
+      lower_part = Enum.slice(data, idx, part_length) |> Enum.reverse() |> Enum.concat()
+      diff = compare_diff(upper_part, lower_part)
+
+      if accept_diff == diff do
+        {:halt, idx}
+      else
+        {:cont, 0}
+      end
+    end)
+  end
+end
+
+input_data = Kino.Input.read(input)
+test_cases = Sol13.read(input_data)
+row_score = Enum.map(test_cases, &Sol13.find_mirror(&1, 1))
+col_score = Enum.map(test_cases, &Sol13.find_mirror(Enum.zip_with(&1, fn x -> x end), 1))
+Enum.sum(row_score) * 100 + Enum.sum(col_score)
+```
+
+```elixir
+a = String.to_charlist("#.#.")
+
+for {x, y} <- Enum.zip(a, a) do
+  x == y
+end
+```
