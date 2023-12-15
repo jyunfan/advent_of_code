@@ -56,9 +56,5 @@ Enum.sum(row_score) * 100 + Enum.sum(col_score)
 ```
 
 ```elixir
-a = String.to_charlist("#.#.")
-
-for {x, y} <- Enum.zip(a, a) do
-  x == y
-end
+String.to_charlist("AA..") -- String.to_charlist("..AA")
 ```

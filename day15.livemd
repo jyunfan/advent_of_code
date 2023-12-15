@@ -1,0 +1,57 @@
+# Day 15
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Sol15 do
+  def read(text) do
+    for test_case <- String.split(text, ",") do
+      String.to_charlist(test_case)
+    end
+  end
+
+  def score(text) do
+    Enum.reduce(text, 0, fn x, acc ->
+      ((acc + x) * 17) |> rem(256)
+    end)
+  end
+
+  def solve_part1(test_cases) do
+    Enum.map(test_cases, &Sol15.score(&1))
+    |> Enum.sum()
+  end
+
+  def solve_part2([], box) do
+    box
+  end
+
+  def solve_part2([head | tail], box) do
+    if ?= in head do
+      label = Enum.slice(head, 0, length(head) - 2)
+      IO.inspect({"=", label})
+      Sol15.solve_part2(tail, box)
+    else
+      IO.inspect("-")
+      Sol15.solve_part2(tail, box)
+    end
+  end
+end
+
+input_data = Kino.Input.read(input)
+test_cases = Sol15.read(input_data)
+Sol15.solve_part2(test_cases, %{})
+```
+
+```elixir
+List.delete()
+```
