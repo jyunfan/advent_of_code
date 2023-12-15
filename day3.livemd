@@ -19,19 +19,76 @@ rows = String.split(input_data, "\n")
 rrows = Enum.zip(1..length(rows), rows)
 
 defmodule Sol do
-  def split_col({row_id, row}, m) do
+  def read_col({row_id, row}, m) do
     cols = Enum.zip(1..String.length(row), String.to_charlist(row))
     Enum.reduce(cols, m, fn {col_id, letter}, m -> Map.put(m, {row_id, col_id}, letter) end)
   end
+
+  def read(text) do
+    rows = String.split(text)
+    row_n = length(rows)
+    col_n = String.length(hd(rows))
+
+    map =
+      Enum.zip(1..length(rows), rows)
+      |> Enum.reduce(%{}, fn row_data, acc -> Sol.read_col(row_data, acc) end)
+
+    {row_n, col_n, map}
+  end
+
+  def symbol_near?(r, c, matrix) do
+    Enum.any?(
+      [
+        {r - 1, c - 1},
+        {r - 1, c},
+        {r - 1, c + 1},
+        {r, c - 1},
+        {r, c + 1},
+        {r + 1, c - 1},
+        {r + 1, c},
+        {r + 1, c + 1}
+      ],
+      fn pos ->
+        matrix[pos] != ?. and (matrix[pos] < ?0 or matrix[pos] > ?9) and matrix[pos] != nil
+      end
+    )
+  end
+
+  def get_row_score(_, col_id, col_n, _, score, _, _) when col_id > col_n + 1 do
+    score
+  end
+
+  def get_row_score(row_id, col_id, col_n, map, score, current_val, current_valid) do
+    letter = Map.get(map, {row_id, col_id}, ?.)
+
+    case letter do
+      _ when letter >= ?0 and letter <= ?9 ->
+        Sol.get_row_score(
+          row_id,
+          col_id + 1,
+          col_n,
+          map,
+          score,
+          current_val * 10 + letter - ?0,
+          current_valid or Sol.symbol_near?(row_id, col_id, map)
+        )
+
+      _ when current_valid ->
+        Sol.get_row_score(row_id, col_id + 1, col_n, map, score + current_val, 0, false)
+
+      _ ->
+        Sol.get_row_score(row_id, col_id + 1, col_n, map, score, 0, false)
+    end
+  end
+
+  def solve(row_n, col_n, map) do
+    for row <- 1..row_n do
+      Sol.get_row_score(row, 1, col_n, map, 0, 0, false)
+    end
+    |> Enum.sum()
+  end
 end
 
-Sol.split_col({1, "123.."}, %{})
-```
-
-```elixir
-Enum.map(String.split("abc", ""), fn x -> x end)
-```
-
-```elixir
-String.to_charlist("abc")
+{row_n, col_n, map} = Sol.read(input_data)
+Sol.solve(row_n, col_n, map)
 ```
