@@ -40,150 +40,93 @@ defmodule Sol do
     s != ?. and (s < ?0 or s > ?9)
   end
 
-  def find_number_up(r, c, maze) do
-    Enum.reduce_whlie([{r - 1, c - 1}, {r - 1, c}, {r - 1, c + 1}], nil, fn {tr, tc}, acc ->
-      case Sol.is_symbol?(maze[{tr, tc}]) do
-        true -> {:halt, {tr, tc}}
-        false -> {:cond, nil}
+  def get_near_symbols(r, c, matrix) do
+    for pos <- [
+          {r - 1, c - 1},
+          {r - 1, c},
+          {r - 1, c + 1},
+          {r, c - 1},
+          {r, c + 1},
+          {r + 1, c - 1},
+          {r + 1, c},
+          {r + 1, c + 1}
+        ],
+        Sol.is_symbol?(Map.get(matrix, pos, ?.)) do
+      pos
+    end
+  end
+
+  def update_symbol_number_map(symbol_number_map, symbols, value) do
+    symbols
+    |> Enum.reduce(symbol_number_map, fn symbol_loc, acc ->
+      case Map.has_key?(acc, symbol_loc) do
+        true -> Map.put(acc, symbol_loc, [value | acc[symbol_loc]])
+        false -> Map.put(acc, symbol_loc, [value])
       end
     end)
   end
 
-  def symbol_near?(r, c, matrix) do
-    Enum.any?(
-      [
-        {r - 1, c - 1},
-        {r - 1, c},
-        {r - 1, c + 1},
-        {r, c - 1},
-        {r, c + 1},
-        {r + 1, c - 1},
-        {r + 1, c},
-        {r + 1, c + 1}
-      ],
-      fn pos ->
-        matrix[pos] != ?. and (matrix[pos] < ?0 or matrix[pos] > ?9) and matrix[pos] != nil
-      end
-    )
+  def scan_row(_, col_id, col_n, _, _, _, symbol_number_map) when col_id > col_n + 1 do
+    symbol_number_map
   end
 
-  def find_2_number_neighbor(r, c, matrix) do
-    up_num =
-      if Enum.any?(
-           [{r - 1, c - 1}, {r - 1, c}, {r - 1, c + 1}],
-           fn pos -> matrix[pos] < ?0 or matrix[pos] > ?9 end
-         ),
-         do: 1,
-         else: 0
-
-    left_num =
-      if Enum.any?(
-           [{r - 1, c}],
-           fn pos -> matrix[pos] < ?0 or matrix[pos] > ?9 end
-         ),
-         do: 1,
-         else: 0
-
-    right_num =
-      if Enum.any?(
-           [{r + 1, c}],
-           fn pos -> matrix[pos] < ?0 or matrix[pos] > ?9 end
-         ),
-         do: 1,
-         else: 0
-
-    down_num =
-      if Enum.any?(
-           [{r + 1, c - 1}, {r + 1, c}, {r + 1, c + 1}],
-           fn pos -> matrix[pos] < ?0 or matrix[pos] > ?9 end
-         ),
-         do: 1,
-         else: 0
-
-    up_num + left_num + right_num + down_num == 2
-    false
-  end
-
-  def get_row_score(_, col_id, col_n, _, score, _, _) when col_id > col_n + 1 do
-    score
-  end
-
-  def get_row_score(row_id, col_id, col_n, map, score, current_val, current_valid) do
-    letter = Map.get(map, {row_id, col_id}, ?.)
+  def scan_row(row_id, col_id, col_n, maze, current_val, near_symbol_set, symbol_number_map) do
+    letter = Map.get(maze, {row_id, col_id}, ?.)
 
     case letter do
       _ when letter >= ?0 and letter <= ?9 ->
-        Sol.get_row_score(
+        Sol.scan_row(
           row_id,
           col_id + 1,
           col_n,
-          map,
-          score,
+          maze,
           current_val * 10 + letter - ?0,
-          current_valid or Sol.symbol_near?(row_id, col_id, map)
+          Sol.get_near_symbols(row_id, col_id, maze)
+          |> Enum.reduce(near_symbol_set, fn x, acc -> MapSet.put(acc, x) end),
+          symbol_number_map
         )
 
-      _ when current_valid ->
-        Sol.get_row_score(row_id, col_id + 1, col_n, map, score + current_val, 0, false)
-
       _ ->
-        Sol.get_row_score(row_id, col_id + 1, col_n, map, score, 0, false)
+        Sol.scan_row(
+          row_id,
+          col_id + 1,
+          col_n,
+          maze,
+          0,
+          MapSet.new(),
+          Sol.update_symbol_number_map(symbol_number_map, near_symbol_set, current_val)
+        )
     end
   end
 
-  def find_valid_symbol(_, col_id, col_n, maze) when col_id > col_n + 1 do
-    maze
+  def build(row_n, col_n, maze) do
+    Enum.reduce(1..row_n, %{}, fn row_id, symbol_number_map ->
+      Sol.scan_row(row_id, 1, col_n, maze, 0, MapSet.new(), symbol_number_map)
+    end)
   end
 
-  def find_valid_symbol(row_id, col_id, col_n, maze) do
-    letter = Map.get(maze, {row_id, col_id}, ?.)
-
-    new_maze =
-      case letter do
-        _ when letter == ?. or (letter >= ?0 and letter <= ?9) ->
-          find_valid_symbol(row_id, col_id + 1, col_n, maze)
-
-        _ ->
-          find_valid_symbol(
-            row_id,
-            col_id + 1,
-            col_n,
-            Map.put(
-              maze,
-              {row_id, col_id},
-              if(Sol.find_2_number_neighbor(row_id, col_id, maze), do: ~c"*", else: ~c".")
-            )
-          )
-      end
-
-    new_maze
-  end
-
-  def solve_part1(row_n, col_n, map) do
-    for row <- 1..row_n do
-      Sol.get_row_score(row, 1, col_n, map, 0, 0, false)
-    end
+  def solve_part1(row_n, col_n, maze) do
+    Sol.build(row_n, col_n, maze)
+    |> Map.values()
+    |> Enum.flat_map(& &1)
     |> Enum.sum()
   end
 
   def solve_part2(row_n, col_n, maze) do
-    new_maze =
-      for row <- 1..row_n, reduce: maze do
-        acc -> find_valid_symbol(row, 1, col_n, acc)
-      end
+    Sol.build(row_n, col_n, maze)
+    |> Map.values()
+    |> Enum.map(fn nums ->
+      l = length(nums)
 
-    Sol.solve_part1(row_n, col_n, new_maze)
+      case l do
+        _ when l == 2 -> Enum.product(nums)
+        _ -> 0
+      end
+    end)
+    |> Enum.sum()
   end
 end
 
 {row_n, col_n, maze} = Sol.read(input_data)
-Sol.solve_part2(row_n, col_n, maze)
-```
-
-```elixir
-m = %{}
-
-for i <- 1..3, j <- 1..3, reduce: m do
-  acc -> Map.put(acc, {i, j}, {i, j})
-end
+{Sol.solve_part1(row_n, col_n, maze), Sol.solve_part2(row_n, col_n, maze)}
 ```
