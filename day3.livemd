@@ -14,12 +14,12 @@ input = Kino.Input.textarea("Input")
 
 ```elixir
 input_data = Kino.Input.read(input)
-# m = %{}
+
 rows = String.split(input_data, "\n")
 rrows = Enum.zip(1..length(rows), rows)
 
 defmodule Sol do
-  def read_col({row_id, row}, m) do
+  def read_row({row_id, row}, m) do
     cols = Enum.zip(1..String.length(row), String.to_charlist(row))
     Enum.reduce(cols, m, fn {col_id, letter}, m -> Map.put(m, {row_id, col_id}, letter) end)
   end
@@ -29,11 +29,24 @@ defmodule Sol do
     row_n = length(rows)
     col_n = String.length(hd(rows))
 
-    map =
+    maze =
       Enum.zip(1..length(rows), rows)
-      |> Enum.reduce(%{}, fn row_data, acc -> Sol.read_col(row_data, acc) end)
+      |> Enum.reduce(%{}, fn row_data, acc -> Sol.read_row(row_data, acc) end)
 
-    {row_n, col_n, map}
+    {row_n, col_n, maze}
+  end
+
+  def is_symbol?(s) do
+    s != ?. and (s < ?0 or s > ?9)
+  end
+
+  def find_number_up(r, c, maze) do
+    Enum.reduce_whlie([{r - 1, c - 1}, {r - 1, c}, {r - 1, c + 1}], nil, fn {tr, tc}, acc ->
+      case Sol.is_symbol?(maze[{tr, tc}]) do
+        true -> {:halt, {tr, tc}}
+        false -> {:cond, nil}
+      end
+    end)
   end
 
   def symbol_near?(r, c, matrix) do
@@ -52,6 +65,43 @@ defmodule Sol do
         matrix[pos] != ?. and (matrix[pos] < ?0 or matrix[pos] > ?9) and matrix[pos] != nil
       end
     )
+  end
+
+  def find_2_number_neighbor(r, c, matrix) do
+    up_num =
+      if Enum.any?(
+           [{r - 1, c - 1}, {r - 1, c}, {r - 1, c + 1}],
+           fn pos -> matrix[pos] < ?0 or matrix[pos] > ?9 end
+         ),
+         do: 1,
+         else: 0
+
+    left_num =
+      if Enum.any?(
+           [{r - 1, c}],
+           fn pos -> matrix[pos] < ?0 or matrix[pos] > ?9 end
+         ),
+         do: 1,
+         else: 0
+
+    right_num =
+      if Enum.any?(
+           [{r + 1, c}],
+           fn pos -> matrix[pos] < ?0 or matrix[pos] > ?9 end
+         ),
+         do: 1,
+         else: 0
+
+    down_num =
+      if Enum.any?(
+           [{r + 1, c - 1}, {r + 1, c}, {r + 1, c + 1}],
+           fn pos -> matrix[pos] < ?0 or matrix[pos] > ?9 end
+         ),
+         do: 1,
+         else: 0
+
+    up_num + left_num + right_num + down_num == 2
+    false
   end
 
   def get_row_score(_, col_id, col_n, _, score, _, _) when col_id > col_n + 1 do
@@ -81,14 +131,59 @@ defmodule Sol do
     end
   end
 
-  def solve(row_n, col_n, map) do
+  def find_valid_symbol(_, col_id, col_n, maze) when col_id > col_n + 1 do
+    maze
+  end
+
+  def find_valid_symbol(row_id, col_id, col_n, maze) do
+    letter = Map.get(maze, {row_id, col_id}, ?.)
+
+    new_maze =
+      case letter do
+        _ when letter == ?. or (letter >= ?0 and letter <= ?9) ->
+          find_valid_symbol(row_id, col_id + 1, col_n, maze)
+
+        _ ->
+          find_valid_symbol(
+            row_id,
+            col_id + 1,
+            col_n,
+            Map.put(
+              maze,
+              {row_id, col_id},
+              if(Sol.find_2_number_neighbor(row_id, col_id, maze), do: ~c"*", else: ~c".")
+            )
+          )
+      end
+
+    new_maze
+  end
+
+  def solve_part1(row_n, col_n, map) do
     for row <- 1..row_n do
       Sol.get_row_score(row, 1, col_n, map, 0, 0, false)
     end
     |> Enum.sum()
   end
+
+  def solve_part2(row_n, col_n, maze) do
+    new_maze =
+      for row <- 1..row_n, reduce: maze do
+        acc -> find_valid_symbol(row, 1, col_n, acc)
+      end
+
+    Sol.solve_part1(row_n, col_n, new_maze)
+  end
 end
 
-{row_n, col_n, map} = Sol.read(input_data)
-Sol.solve(row_n, col_n, map)
+{row_n, col_n, maze} = Sol.read(input_data)
+Sol.solve_part2(row_n, col_n, maze)
+```
+
+```elixir
+m = %{}
+
+for i <- 1..3, j <- 1..3, reduce: m do
+  acc -> Map.put(acc, {i, j}, {i, j})
+end
 ```
