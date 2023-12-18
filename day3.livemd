@@ -14,12 +14,12 @@ input = Kino.Input.textarea("Input")
 
 ```elixir
 input_data = Kino.Input.read(input)
-# m = %{}
+
 rows = String.split(input_data, "\n")
 rrows = Enum.zip(1..length(rows), rows)
 
 defmodule Sol do
-  def read_col({row_id, row}, m) do
+  def read_row({row_id, row}, m) do
     cols = Enum.zip(1..String.length(row), String.to_charlist(row))
     Enum.reduce(cols, m, fn {col_id, letter}, m -> Map.put(m, {row_id, col_id}, letter) end)
   end
@@ -29,66 +29,104 @@ defmodule Sol do
     row_n = length(rows)
     col_n = String.length(hd(rows))
 
-    map =
+    maze =
       Enum.zip(1..length(rows), rows)
-      |> Enum.reduce(%{}, fn row_data, acc -> Sol.read_col(row_data, acc) end)
+      |> Enum.reduce(%{}, fn row_data, acc -> Sol.read_row(row_data, acc) end)
 
-    {row_n, col_n, map}
+    {row_n, col_n, maze}
   end
 
-  def symbol_near?(r, c, matrix) do
-    Enum.any?(
-      [
-        {r - 1, c - 1},
-        {r - 1, c},
-        {r - 1, c + 1},
-        {r, c - 1},
-        {r, c + 1},
-        {r + 1, c - 1},
-        {r + 1, c},
-        {r + 1, c + 1}
-      ],
-      fn pos ->
-        matrix[pos] != ?. and (matrix[pos] < ?0 or matrix[pos] > ?9) and matrix[pos] != nil
+  def is_symbol?(s) do
+    s != ?. and (s < ?0 or s > ?9)
+  end
+
+  def get_near_symbols(r, c, matrix) do
+    for pos <- [
+          {r - 1, c - 1},
+          {r - 1, c},
+          {r - 1, c + 1},
+          {r, c - 1},
+          {r, c + 1},
+          {r + 1, c - 1},
+          {r + 1, c},
+          {r + 1, c + 1}
+        ],
+        Sol.is_symbol?(Map.get(matrix, pos, ?.)) do
+      pos
+    end
+  end
+
+  def update_symbol_number_map(symbol_number_map, symbols, value) do
+    symbols
+    |> Enum.reduce(symbol_number_map, fn symbol_loc, acc ->
+      case Map.has_key?(acc, symbol_loc) do
+        true -> Map.put(acc, symbol_loc, [value | acc[symbol_loc]])
+        false -> Map.put(acc, symbol_loc, [value])
       end
-    )
+    end)
   end
 
-  def get_row_score(_, col_id, col_n, _, score, _, _) when col_id > col_n + 1 do
-    score
+  def scan_row(_, col_id, col_n, _, _, _, symbol_number_map) when col_id > col_n + 1 do
+    symbol_number_map
   end
 
-  def get_row_score(row_id, col_id, col_n, map, score, current_val, current_valid) do
-    letter = Map.get(map, {row_id, col_id}, ?.)
+  def scan_row(row_id, col_id, col_n, maze, current_val, near_symbol_set, symbol_number_map) do
+    letter = Map.get(maze, {row_id, col_id}, ?.)
 
     case letter do
       _ when letter >= ?0 and letter <= ?9 ->
-        Sol.get_row_score(
+        Sol.scan_row(
           row_id,
           col_id + 1,
           col_n,
-          map,
-          score,
+          maze,
           current_val * 10 + letter - ?0,
-          current_valid or Sol.symbol_near?(row_id, col_id, map)
+          Sol.get_near_symbols(row_id, col_id, maze)
+          |> Enum.reduce(near_symbol_set, fn x, acc -> MapSet.put(acc, x) end),
+          symbol_number_map
         )
 
-      _ when current_valid ->
-        Sol.get_row_score(row_id, col_id + 1, col_n, map, score + current_val, 0, false)
-
       _ ->
-        Sol.get_row_score(row_id, col_id + 1, col_n, map, score, 0, false)
+        Sol.scan_row(
+          row_id,
+          col_id + 1,
+          col_n,
+          maze,
+          0,
+          MapSet.new(),
+          Sol.update_symbol_number_map(symbol_number_map, near_symbol_set, current_val)
+        )
     end
   end
 
-  def solve(row_n, col_n, map) do
-    for row <- 1..row_n do
-      Sol.get_row_score(row, 1, col_n, map, 0, 0, false)
-    end
+  def build(row_n, col_n, maze) do
+    Enum.reduce(1..row_n, %{}, fn row_id, symbol_number_map ->
+      Sol.scan_row(row_id, 1, col_n, maze, 0, MapSet.new(), symbol_number_map)
+    end)
+  end
+
+  def solve_part1(row_n, col_n, maze) do
+    Sol.build(row_n, col_n, maze)
+    |> Map.values()
+    |> Enum.flat_map(& &1)
+    |> Enum.sum()
+  end
+
+  def solve_part2(row_n, col_n, maze) do
+    Sol.build(row_n, col_n, maze)
+    |> Map.values()
+    |> Enum.map(fn nums ->
+      l = length(nums)
+
+      case l do
+        _ when l == 2 -> Enum.product(nums)
+        _ -> 0
+      end
+    end)
     |> Enum.sum()
   end
 end
 
-{row_n, col_n, map} = Sol.read(input_data)
-Sol.solve(row_n, col_n, map)
+{row_n, col_n, maze} = Sol.read(input_data)
+{Sol.solve_part1(row_n, col_n, maze), Sol.solve_part2(row_n, col_n, maze)}
 ```
