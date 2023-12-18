@@ -1,0 +1,128 @@
+# Day 18
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = """
+R 6 (#70c710)
+D 5 (#0dc571)
+L 2 (#5713f0)
+D 2 (#d2c081)
+R 2 (#59c680)
+D 2 (#411b91)
+L 5 (#8ceee2)
+U 2 (#caa173)
+L 1 (#1b58a2)
+U 2 (#caa171)
+R 2 (#7807d2)
+U 3 (#a77fa3)
+L 2 (#015232)
+U 2 (#7a21e3)
+"""
+```
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Sol18 do
+  def read(text) do
+    for row <- String.split(text, "\n") do
+      [dir, steps, color] = String.split(row, " ")
+      [dir, String.to_integer(steps), color]
+    end
+  end
+
+  def add_wall({row, col}, "R", steps) do
+    for c <- 1..steps do
+      {row, col + c}
+    end
+  end
+
+  def add_wall({row, col}, "D", steps) do
+    for r <- 1..steps do
+      {row + r, col}
+    end
+  end
+
+  def add_wall({row, col}, "U", steps) do
+    for r <- 1..steps do
+      {row - r, col}
+    end
+  end
+
+  def add_wall({row, col}, "L", steps) do
+    for c <- 1..steps do
+      {row, col - c}
+    end
+  end
+
+  def build(_, [], maze) do
+    maze
+  end
+
+  def build({row, col}, [[dir, steps, _] | tail], maze) do
+    # IO.inspect({{row, col}, [dir, steps]})
+    case dir do
+      "R" -> Sol18.build({row, col + steps}, tail, maze ++ Sol18.add_wall({row, col}, dir, steps))
+      "U" -> Sol18.build({row - steps, col}, tail, maze ++ Sol18.add_wall({row, col}, dir, steps))
+      "D" -> Sol18.build({row + steps, col}, tail, maze ++ Sol18.add_wall({row, col}, dir, steps))
+      "L" -> Sol18.build({row, col - steps}, tail, maze ++ Sol18.add_wall({row, col}, dir, steps))
+    end
+  end
+
+  def count([], _, _, score) do
+    score
+  end
+
+  def count([{row, col} | tail], {lastr, lastc}, inside, score) do
+    IO.inspect({{lastr, lastc}, {row, col}, inside, score})
+
+    case {lastr == row, inside} do
+      {false, _} ->
+        IO.inspect("change row + 1")
+        Sol18.count(tail, {row, col}, true, score + 1)
+
+      {true, true} ->
+        IO.inspect({"inside + ", col - lastc})
+
+        Sol18.count(
+          tail,
+          {row, col},
+          if lastc + 1 == col do
+            inside
+          else
+            not inside
+          end,
+          score + col - lastc
+        )
+
+      {true, false} ->
+        IO.inspect({"outside + 1"})
+
+        Sol18.count(
+          tail,
+          {row, col},
+          if lastc + 1 == col do
+            inside
+          else
+            not inside
+          end,
+          score + 1
+        )
+    end
+  end
+end
+
+input_data = Kino.Input.read(input)
+cmds = Sol18.read(String.trim(input_data))
+sharps = Sol18.build({0, 0}, cmds, [{0, 0}])
+Sol18.count(Enum.dedup(Enum.sort(sharps)), {0, -1}, true, 0)
+```
