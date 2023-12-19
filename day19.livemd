@@ -1,0 +1,129 @@
+# Day 19
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = """
+R 6 (#70c710)
+D 5 (#0dc571)
+L 2 (#5713f0)
+D 2 (#d2c081)
+R 2 (#59c680)
+D 2 (#411b91)
+L 5 (#8ceee2)
+U 2 (#caa173)
+L 1 (#1b58a2)
+U 2 (#caa171)
+R 2 (#7807d2)
+U 3 (#a77fa3)
+L 2 (#015232)
+U 2 (#7a21e3)
+"""
+```
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Sol19 do
+  def read_workflow(text) do
+    # IO.inspect(text)
+    case String.contains?(text, ":") do
+      true ->
+        [condition, go_state] = String.split(text, ":")
+        [part, target] = Regex.split(~r/[<>]/, condition)
+
+        case String.contains?(condition, "<") do
+          true ->
+            %{go_state: go_state, part: part, comparator: "<", target: String.to_integer(target)}
+
+          false ->
+            %{go_state: go_state, part: part, comparator: ">", target: String.to_integer(target)}
+        end
+
+      false ->
+        %{go_state: text}
+    end
+  end
+
+  def read_rule(text) do
+    [state, workflows_str] = String.split(text, "{")
+
+    workflows =
+      String.replace(workflows_str, "}", "")
+      |> String.split(",")
+      |> Enum.map(&Sol19.read_workflow(&1))
+
+    [state, workflows]
+  end
+
+  def read(text) do
+    [rules_str, inits_str] = String.split(text, "\n\n")
+
+    rules =
+      String.split(rules_str, "\n")
+      |> Enum.map(fn row -> Sol19.read_rule(row) end)
+      |> Enum.into(%{}, fn [a, b] -> {a, b} end)
+
+    inits =
+      String.split(inits_str, "\n")
+      |> Enum.map(fn row ->
+        tl(Regex.split(~r/[{}=,]/, row))
+        |> Enum.chunk_every(2, 2, :discard)
+        |> Enum.into(%{}, fn [a, b] -> {a, String.to_integer(b)} end)
+      end)
+
+    {rules, inits}
+  end
+
+  def go("A", parts, _) do
+    Map.values(parts) |> Enum.sum()
+  end
+
+  def go("R", parts, _) do
+    0
+  end
+
+  def go(state, parts, rules) do
+    IO.inspect({"state", state})
+
+    for workflow <- Map.get(rules, state) do
+      IO.inspect({"workflow", workflow})
+      part = Map.get(workflow, :part, nil)
+      comparator = Map.get(workflow, :comparator, nil)
+      target = Map.get(workflow, :target, nil)
+      go_state = Map.get(workflow, :go_state)
+      IO.inspect({part, comparator, target, go_state})
+      part_value = Map.get(parts, part, nil)
+
+      case {part, comparator, target, go_state} do
+        {nil, _, _, go_state} -> Sol19.go(go_state, parts, rules)
+        {part, "<", target, go_state} when part_value < target -> Sol19.go(go_state, parts, rules)
+        {part, ">", target, go_state} when part_value > target -> Sol19.go(go_state, parts, rules)
+        _ -> 0
+      end
+    end
+  end
+end
+
+input_data = Kino.Input.read(input)
+{rules, inits} = Sol19.read(input_data)
+Enum.map(inits, fn part -> Sol19.go("in", part, rules) end)
+```
+
+```elixir
+tl(Regex.split(~r/[{}=,]/, "{x=787,m=2655,a=1222,s=2876}"))
+|> Enum.chunk_every(2, 2, :discard)
+|> Enum.into(%{}, fn [a, b] -> {a, String.to_integer(b)} end)
+```
+
+```elixir
+
+```
