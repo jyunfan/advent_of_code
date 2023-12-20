@@ -1,0 +1,134 @@
+# Day 20
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Sol20 do
+  def make_module(module_str, dest_modules) do
+    {type, state} =
+      case module_str do
+        "%" <> _ -> {:flipflop, :off}
+        "&" <> _ -> {:conjunction, nil}
+        "broadcaster" -> {:broadcaster, nil}
+        _ -> {:simple, nil}
+      end
+
+    %{
+      type: type,
+      state: state,
+      src: [],
+      src_value: [],
+      dest: dest_modules
+    }
+  end
+
+  def read_rule(text) do
+    [module_str, dest_modules_str] =
+      text
+      |> String.replace(" ", "")
+      |> String.split("->")
+
+    dest_modules = String.split(dest_modules_str, ",")
+    module = Sol20.make_module(module_str, dest_modules)
+    module_name = Regex.replace(~r/[%&]/, module_str, "")
+    {module_name, module}
+  end
+
+  def update_src(module_name, modules) do
+    Enum.reduce(modules[module_name][:dest], modules, fn dest, acc ->
+      dest_module = modules[dest]
+      update_dest_module = Map.put(dest_module, :src, [module_name | dest_module[:src]])
+
+      update_dest_module =
+        Map.put(update_dest_module, :src_value, [:low | update_dest_module[:src_value]])
+
+      Map.put(acc, dest, update_dest_module)
+    end)
+  end
+
+  def read(text) do
+    modules =
+      String.split(text, "\n")
+      |> Enum.map(&Sol20.read_rule(&1))
+      |> Enum.into(%{})
+
+    Map.keys(modules)
+    |> Enum.reduce(modules, fn module_name, acc -> Sol20.update_src(module_name, acc) end)
+  end
+
+  def simulate(machine, [], high_count, low_count) do
+    {high_count, low_count}
+  end
+
+  def simulate(machine, [{value, name} | pulses_tail], high_count, low_count) do
+    IO.inspect({value, name})
+    module = machine[name]
+
+    case module[:type] do
+      :broadcaster ->
+        simulate(
+          machine,
+          pulses_tail ++ Enum.map(module[:dest], fn x -> {value, x} end),
+          high_count,
+          low_count
+        )
+
+      :flipflop ->
+        case {module[:state], value} do
+          {_, :high} ->
+            simulate(machine, pulses_tail, high_count, low_count)
+
+          {:on, :low} ->
+            new_machine = Map.put(machine, name, Map.put(module, :state, :off))
+
+            Sol20.simulate(
+              new_machine,
+              pulses_tail ++ Enum.map(module[:dest], fn x -> {:low, x} end),
+              high_count,
+              low_count
+            )
+
+          {:off, :low} ->
+            new_machine = Map.put(machine, name, Map.put(module, :state, :on))
+
+            Sol20.simulate(
+              new_machine,
+              pulses_tail ++ Enum.map(module[:dest], fn x -> {:high, x} end),
+              high_count,
+              low_count
+            )
+        end
+
+      :simple ->
+        simulate(machine, pulses_tail, high_count, low_count)
+
+      :conjunction ->
+        simulate(machine, pulses_tail, high_count, low_count)
+    end
+  end
+end
+
+input_data = Kino.Input.read(input)
+machine = Sol20.read(input_data)
+# pulses = :queue.new
+pulses = [{:low, "broadcaster"}]
+Sol20.simulate(machine, pulses, 0, 0)
+```
+
+```elixir
+queue = :queue.new()
+queue = :queue.in(5, queue)
+queue = :queue.in(3, queue)
+{{:value, head}, queue} = :queue.out(queue)
+head
+```
