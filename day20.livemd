@@ -17,10 +17,15 @@ defmodule Sol20 do
   def make_module(module_str, dest_modules) do
     {type, state} =
       case module_str do
-        "%" <> _ -> {:flipflop, :off}
-        "&" <> _ -> {:conjunction, nil}
-        "broadcaster" -> {:broadcaster, nil}
-        _ -> {:simple, nil}
+        "%" <> _ ->
+          {:flipflop, :off}
+
+        "&" <> _ ->
+          {:conjunction, nil}
+
+        "broadcaster" ->
+          {:broadcaster, nil}
+          # _ -> {:simple, nil}
       end
 
     %{
@@ -45,14 +50,23 @@ defmodule Sol20 do
   end
 
   def update_src(module_name, modules) do
+    IO.inspect({"update_src", module_name, modules[module_name]})
+
     Enum.reduce(modules[module_name][:dest], modules, fn dest, acc ->
       dest_module = modules[dest]
-      update_dest_module = Map.put(dest_module, :src, [module_name | dest_module[:src]])
 
-      update_dest_module =
-        Map.put(update_dest_module, :src_value, [:low | update_dest_module[:src_value]])
+      case dest_module do
+        nil ->
+          acc
 
-      Map.put(acc, dest, update_dest_module)
+        _ ->
+          update_dest_module = Map.put(dest_module, :src, [module_name | dest_module[:src]])
+
+          update_dest_module =
+            Map.put(update_dest_module, :src_value, [:low | update_dest_module[:src_value]])
+
+          Map.put(acc, dest, update_dest_module)
+      end
     end)
   end
 
@@ -67,68 +81,79 @@ defmodule Sol20 do
   end
 
   def simulate(machine, [], high_count, low_count) do
-    {high_count, low_count}
+    {machine, high_count, low_count}
   end
 
-  def simulate(machine, [{value, name} | pulses_tail], high_count, low_count) do
-    IO.inspect({value, name})
-    module = machine[name]
+  def simulate(
+        machine,
+        [{value, module_name, from_module_name} | pulses_tail],
+        high_count,
+        low_count
+      ) do
+    # IO.inspect({from_module_name, value, module_name, high_count, low_count})
+    new_high_count = high_count + if value == :high, do: 1, else: 0
+    new_low_count = low_count + if value == :low, do: 1, else: 0
+    module = machine[module_name]
 
-    case module[:type] do
-      :broadcaster ->
-        simulate(
-          machine,
-          pulses_tail ++ Enum.map(module[:dest], fn x -> {value, x} end),
-          high_count,
-          low_count
-        )
+    {new_machine, new_pulses} =
+      case module[:type] do
+        nil ->
+          {machine, []}
 
-      :flipflop ->
-        case {module[:state], value} do
-          {_, :high} ->
-            simulate(machine, pulses_tail, high_count, low_count)
+        :broadcaster ->
+          {machine, Enum.map(module[:dest], fn x -> {value, x, module_name} end)}
 
-          {:on, :low} ->
-            new_machine = Map.put(machine, name, Map.put(module, :state, :off))
+        :flipflop ->
+          case {module[:state], value} do
+            {_, :high} ->
+              {machine, []}
 
-            Sol20.simulate(
-              new_machine,
-              pulses_tail ++ Enum.map(module[:dest], fn x -> {:low, x} end),
-              high_count,
-              low_count
-            )
+            {:on, :low} ->
+              new_machine = Map.put(machine, module_name, Map.put(module, :state, :off))
+              new_pulses = Enum.map(module[:dest], fn x -> {:low, x, module_name} end)
+              {new_machine, new_pulses}
 
-          {:off, :low} ->
-            new_machine = Map.put(machine, name, Map.put(module, :state, :on))
+            {:off, :low} ->
+              new_machine = Map.put(machine, module_name, Map.put(module, :state, :on))
+              new_pulses = Enum.map(module[:dest], fn x -> {:high, x, module_name} end)
+              {new_machine, new_pulses}
+          end
 
-            Sol20.simulate(
-              new_machine,
-              pulses_tail ++ Enum.map(module[:dest], fn x -> {:high, x} end),
-              high_count,
-              low_count
-            )
-        end
+        :conjunction ->
+          idx = Enum.find_index(module[:src], &(&1 == from_module_name))
 
-      :simple ->
-        simulate(machine, pulses_tail, high_count, low_count)
+          new_module =
+            Map.put(module, :src_value, List.replace_at(module[:src_value], idx, value))
 
-      :conjunction ->
-        simulate(machine, pulses_tail, high_count, low_count)
-    end
+          out_signal =
+            case Enum.all?(new_module[:src_value], fn x -> x == :high end) do
+              true -> :low
+              false -> :high
+            end
+
+          new_machine = Map.put(machine, module_name, new_module)
+          new_pulses = Enum.map(module[:dest], fn x -> {out_signal, x, module_name} end)
+          {new_machine, new_pulses}
+      end
+
+    Sol20.simulate(new_machine, pulses_tail ++ new_pulses, new_high_count, new_low_count)
   end
 end
 
 input_data = Kino.Input.read(input)
 machine = Sol20.read(input_data)
-# pulses = :queue.new
-pulses = [{:low, "broadcaster"}]
-Sol20.simulate(machine, pulses, 0, 0)
+
+pulses = [{:low, "broadcaster", "button"}]
+# Sol20.simulate(machine, pulses, 0, 0)
+{_, high_count, low_count} =
+  Enum.reduce(1..1000, {machine, 0, 0}, fn _, {mac, high_count, low_count} ->
+    Sol20.simulate(mac, pulses, high_count, low_count)
+  end)
+
+high_count * low_count
 ```
 
 ```elixir
-queue = :queue.new()
-queue = :queue.in(5, queue)
-queue = :queue.in(3, queue)
-{{:value, head}, queue} = :queue.out(queue)
-head
+m = %{a: [1, 2, 3]}
+update_in(m, [:a], &(&1 ++ [4]))
 ```
