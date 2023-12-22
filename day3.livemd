@@ -82,7 +82,8 @@ defmodule Sol do
           maze,
           current_val * 10 + letter - ?0,
           Sol.get_near_symbols(row_id, col_id, maze)
-          |> Enum.reduce(near_symbol_set, fn x, acc -> MapSet.put(acc, x) end),
+          |> MapSet.new()
+          |> MapSet.union(near_symbol_set),
           symbol_number_map
         )
 
@@ -116,10 +117,8 @@ defmodule Sol do
     Sol.build(row_n, col_n, maze)
     |> Map.values()
     |> Enum.map(fn nums ->
-      l = length(nums)
-
-      case l do
-        _ when l == 2 -> Enum.product(nums)
+      case length(nums) do
+        2 -> Enum.product(nums)
         _ -> 0
       end
     end)
@@ -129,4 +128,8 @@ end
 
 {row_n, col_n, maze} = Sol.read(input_data)
 {Sol.solve_part1(row_n, col_n, maze), Sol.solve_part2(row_n, col_n, maze)}
+```
+
+```elixir
+[1, 2, 3] |> Enum.into(MapSet.new())
 ```
