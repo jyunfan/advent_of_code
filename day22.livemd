@@ -1,0 +1,63 @@
+# Day 22
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Sol22 do
+  def read_brick(text) do
+    # IO.inspect(text)
+    # [x1, y1, z1, x2, y2, z2]
+    Regex.split(~r/[,~]/, text)
+  end
+
+  def cover(a, b, bricks_map) when a == b do
+    false
+  end
+
+  def cover(a, b, bricks_map) do
+    [ax1, ay1, az1, ax2, ay2, az2] = bricks_map[a]
+    [bx1, by1, bz1, bx2, by2, bz2] = bricks_map[b]
+    ix1 = max(ax1, bx1)
+    ix2 = min(ax2, bx2)
+    iy1 = max(ay1, by1)
+    iy2 = max(ax2, ay2)
+    az1 > bz2 and ix2 >= ix1 and iy2 >= iy1
+  end
+
+  def find_pairs(bricks_map) do
+    n = length(Map.keys(bricks_map))
+
+    for b1 <- 1..n, b2 <- 1..n, Sol22.cover(b2, b1, bricks_map) do
+      {b1, b2}
+    end
+  end
+
+  def read(text) do
+    String.split(text, "\n")
+    |> Enum.map(&Sol22.read_brick(&1))
+  end
+end
+
+input_data = Kino.Input.read(input)
+bricks = Sol22.read(input_data)
+bricks_map = Enum.zip(1..length(bricks), bricks) |> Enum.into(Map.new())
+
+pairs = Sol22.find_pairs(bricks_map)
+# Loop
+# find a bricks B without floating support
+# B flow, B fixed
+```
+
+```elixir
+=1
+```
