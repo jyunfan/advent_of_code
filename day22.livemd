@@ -18,6 +18,7 @@ defmodule Sol22 do
     # IO.inspect(text)
     # [x1, y1, z1, x2, y2, z2]
     Regex.split(~r/[,~]/, text)
+    |> Enum.map(&String.to_integer(&1))
   end
 
   def cover(a, b, bricks_map) when a == b do
@@ -30,7 +31,7 @@ defmodule Sol22 do
     ix1 = max(ax1, bx1)
     ix2 = min(ax2, bx2)
     iy1 = max(ay1, by1)
-    iy2 = max(ax2, ay2)
+    iy2 = min(ay2, by2)
     az1 > bz2 and ix2 >= ix1 and iy2 >= iy1
   end
 
@@ -44,7 +45,70 @@ defmodule Sol22 do
 
   def read(text) do
     String.split(text, "\n")
-    |> Enum.map(&Sol22.read_brick(&1))
+    |> Enum.map(&read_brick(&1))
+  end
+
+  def build_graph(bricks, pairs) do
+    g = :digraph.new()
+
+    Enum.with_index(bricks, fn brick, idx ->
+      :digraph.add_vertex(g, idx + 1, brick)
+    end)
+
+    for {src, dest} <- pairs do
+      :digraph.add_edge(g, src, dest)
+    end
+
+    g
+  end
+
+  def fall([], _, bricks_map) do
+    bricks_map
+  end
+
+  def fall([node | tail], g, bricks_map) do
+    lowest_z =
+      (([0] ++
+          for parent <- :digraph.in_neighbours(g, node) do
+            [x1, y1, z1, x2, y2, z2] = bricks_map[parent]
+            z2
+          end)
+       |> Enum.max()) + 1
+
+    IO.inspect({"node", node, "lowest_z", lowest_z, :digraph.in_neighbours(g, node)})
+    [x1, y1, z1, x2, y2, z2] = bricks_map[node]
+    z2 = z2 - z1 + lowest_z
+    z1 = lowest_z
+    newmap = Map.put(bricks_map, node, [x1, y1, z1, x2, y2, z2])
+    IO.inspect({node, [x1, y1, z1, x2, y2, z2]})
+    fall(tail, g, newmap)
+  end
+
+  def remove_notouch_pairs(g, bricks_map) do
+    edges = :digraph.edges(g)
+
+    for edge <- edges do
+      {_, src, dest, _} = :digraph.edge(g, edge)
+      [ax1, ay1, az1, ax2, ay2, az2] = bricks_map[src]
+      [bx1, by1, bz1, bx2, by2, bz2] = bricks_map[dest]
+
+      if az2 + 1 != bz1 do
+        IO.inspect({"remove edge", src, dest, "az2", az2, "bz1", bz1})
+        :digraph.del_edge(g, edge)
+      end
+    end
+
+    edges = :digraph.edges(g)
+
+    for edge <- edges do
+      {_, src, dest, _} = :digraph.edge(g, edge)
+      IO.inspect({src, dest})
+    end
+  end
+
+  def find_safe_bricks([], _, counter), do: counter
+
+  def find_safe_bricks([node | tail], g, counter) do
   end
 end
 
@@ -53,11 +117,9 @@ bricks = Sol22.read(input_data)
 bricks_map = Enum.zip(1..length(bricks), bricks) |> Enum.into(Map.new())
 
 pairs = Sol22.find_pairs(bricks_map)
-# Loop
-# find a bricks B without floating support
-# B flow, B fixed
-```
-
-```elixir
-=1
+g = Sol22.build_graph(bricks, pairs)
+toporder = :digraph_utils.topsort(g)
+bricks_map = Sol22.fall(toporder, g, bricks_map)
+Sol22.remove_notouch_pairs(g, bricks_map)
+Sol22.find_safe_bricks(toporder, g, 0)
 ```
